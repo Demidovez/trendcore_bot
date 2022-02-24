@@ -126,7 +126,7 @@ export const getBlockedCoins = async (id: number): Promise<string[]> => {
   try {
     return await User.findOne({ user_id: id })
       .select({ blockedCoins: 1, _id: 0 })
-      .then((result) => (result ? result.blockedCoins : []));
+      .then((result) => (result ? result.blockedCoins.map(coin => coin) : []));
   } catch {
     return [];
   }

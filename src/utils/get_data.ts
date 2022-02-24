@@ -22,7 +22,7 @@ export const getCoinsWithNotify = async (
             index > 0 &&
             child.childNodes.length > 5
           ) {
-            const coinName = child.childNodes[1].childNodes[0].rawText;
+            const coinName = child.childNodes[1].childNodes[0].rawText.trim();
 
             const dollars =
               child.childNodes[2].childNodes[0].rawText.split(" ")[0];
@@ -36,9 +36,15 @@ export const getCoinsWithNotify = async (
 
             if (dollarsValue < 500000) return;
 
-            const price = parseFloat(child.childNodes[4].childNodes[0].rawText);
-            const level = parseFloat(child.childNodes[6].childNodes[0].rawText);
+            const price = parseFloat(
+              child.childNodes[4].childNodes[0].rawText.trim()
+            );
+            const level = parseFloat(
+              child.childNodes[6].childNodes[0].rawText.trim()
+            );
             const isPlus = level >= 0;
+
+            if (Math.abs(level) > 2) return;
 
             responseCoins = [
               ...responseCoins,
@@ -54,7 +60,7 @@ export const getCoinsWithNotify = async (
           }
         });
 
-        return (currentCoins = responseCoins.map((responseCoin) => {
+        return responseCoins.map((responseCoin) => {
           const currentCoin = currentCoins.find(
             (currentCoin) =>
               currentCoin.coinName == responseCoin.coinName &&
@@ -62,11 +68,12 @@ export const getCoinsWithNotify = async (
           );
 
           if (currentCoin) {
-            const deltaLevel = currentCoin.isPlus
-              ? currentCoin.level - responseCoin.level
-              : responseCoin.level - currentCoin.level;
-
-            if (deltaLevel >= 0.5 && !currentCoin.isRepeated) {
+            if (
+              Math.abs(responseCoin.level) < Math.abs(currentCoin.level) &&
+              Math.abs(currentCoin.level) >= 0.5 &&
+              Math.abs(responseCoin.level) <= 0.5 &&
+              !currentCoin.isRepeated
+            ) {
               sendNotify(bot, responseCoin, true);
 
               return { ...responseCoin, isRepeated: true };
@@ -78,7 +85,7 @@ export const getCoinsWithNotify = async (
 
             return responseCoin;
           }
-        }));
+        });
       } catch (e) {
         console.log("ERROR BOT: " + e);
 
@@ -115,7 +122,7 @@ export const getCurrentCoins = async (
             index > 0 &&
             child.childNodes.length > 5
           ) {
-            const coinName = child.childNodes[1].childNodes[0].rawText;
+            const coinName = child.childNodes[1].childNodes[0].rawText.trim();
 
             const dollars =
               child.childNodes[2].childNodes[0].rawText.split(" ")[0];
@@ -129,9 +136,15 @@ export const getCurrentCoins = async (
 
             if (dollarsValue < 500000) return;
 
-            const price = parseFloat(child.childNodes[4].childNodes[0].rawText);
-            const level = parseFloat(child.childNodes[6].childNodes[0].rawText);
+            const price = parseFloat(
+              child.childNodes[4].childNodes[0].rawText.trim()
+            );
+            const level = parseFloat(
+              child.childNodes[6].childNodes[0].rawText.trim()
+            );
             const isPlus = level >= 0;
+
+            if (Math.abs(level) > 2) return;
 
             responseCoins = [
               ...responseCoins,

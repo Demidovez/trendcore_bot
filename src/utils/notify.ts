@@ -39,7 +39,7 @@ export const sendNotify = async (
 
         const blockedCoins = await getBlockedCoins(user.id);
 
-        if (!blockedCoins.includes(coinName)) {
+        if (!blockedCoins.includes(coinName.toLowerCase())) {
           bot.telegram.sendMessage(
             user.id,
             `${sticker} ${coinName}\n${plotnost}\nЦена: ${price}\nДо уровня:${
@@ -80,28 +80,32 @@ export const sendRestartNotify = async (
       .then((user) => {
         let resultTablo = "Перезапуск бота!\nТекущие данные:\n";
 
-        coins.map((coin) => {
-          const { coinName, dollarsValue, price, level } = coin;
+        if (coins.length > 0) {
+          coins.map((coin) => {
+            const { coinName, dollarsValue, price, level } = coin;
 
-          let plotnost = "";
-          let sticker = "";
+            let plotnost = "";
+            let sticker = "";
 
-          if (dollarsValue >= 3000000) {
-            plotnost = "Огромная плотность";
-            sticker = "🔴";
-          } else if (dollarsValue >= 1000000) {
-            plotnost = "Большая плотность";
-            sticker = "🟣";
-          } else if (dollarsValue >= 500000) {
-            plotnost = "Средняя плотность";
-            sticker = "🟡";
-          } else {
-            plotnost = "Плотность неизвестна";
-            sticker = "❓";
-          }
+            if (dollarsValue >= 3000000) {
+              plotnost = "Огромная плотность";
+              sticker = "🔴";
+            } else if (dollarsValue >= 1000000) {
+              plotnost = "Большая плотность";
+              sticker = "🟣";
+            } else if (dollarsValue >= 500000) {
+              plotnost = "Средняя плотность";
+              sticker = "🟡";
+            } else {
+              plotnost = "Плотность неизвестна";
+              sticker = "❓";
+            }
 
-          resultTablo += `\n\n${sticker} ${coinName}\n${plotnost}\nЦена: ${price}\nДо уровня: ${level}%`;
-        });
+            resultTablo += `\n\n${sticker} ${coinName}\n${plotnost}\nЦена: ${price}\nДо уровня: ${level}%`;
+          });
+        } else {
+          resultTablo += `\n\nМонет нет :(`;
+        }
 
         bot.telegram.sendMessage(user.id, resultTablo);
       })
