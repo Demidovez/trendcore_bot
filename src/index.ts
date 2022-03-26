@@ -1,12 +1,11 @@
 import { Telegraf, Scenes, Markup } from "telegraf";
 import { blacklistScene } from "./scenes/blacklist_scene";
-import { ICoin, MyScenes } from "./types/types";
+import { ICoin, IData, MyScenes } from "./types/types";
 import LocalSession from "telegraf-session-local";
 import mongoose from "mongoose";
 import { getAllUsersIds, saveUserToDB } from "./mongo/utils/db_utils";
 import { requestAddUser, sendMessageToAdmin } from "./utils";
 import { getCoinsWithNotify, getCurrentCoins } from "./utils/get_data";
-import { sendRestartNotify } from "./utils/notify";
 
 // Подключение к БД
 mongoose.connect(process.env.MONGO_URL as string);
@@ -40,16 +39,16 @@ bot.use(stage.middleware());
 
 // Достаем данные по монетам с периодичностью и делаем рассылку всем активным пользователям
 let intervalId: ReturnType<typeof setInterval>;
-let currentCoins: ICoin[] = [];
+const coinsData: IData = {
+  coins: [],
+};
 
-getCurrentCoins(bot).then((coins) => {
-  currentCoins = coins;
-  // Уведомляем о перезапуске и показываем текущие данные
-  sendRestartNotify(bot, coins);
+getCurrentCoins(bot, coinsData).then(() => {
+  bot.telegram.sendMessage(321438949, "Перезапуск бота");
 
   // Повторяем сбор каждые мс
   intervalId = setInterval(async () => {
-    currentCoins = await getCoinsWithNotify(bot, currentCoins);
+    await getCoinsWithNotify(bot, coinsData);
   }, 10000);
 });
 

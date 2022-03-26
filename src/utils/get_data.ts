@@ -2,13 +2,13 @@ import { HTMLElement, parse } from "node-html-parser";
 import axios from "axios";
 import { sendErrorNotify, sendNotify } from "./notify";
 import { Scenes, Telegraf } from "telegraf";
-import { ICoin } from "../types/types";
+import { ICoin, IData } from "../types/types";
 
 export const getCoinsWithNotify = async (
   bot: Telegraf<Scenes.SceneContext<Scenes.SceneSessionData>>,
-  currentCoins: ICoin[]
-): Promise<ICoin[]> => {
-  const coins = await axios("https://trendcore.io/level/indexsee.php")
+  coinsData: IData
+): Promise<any> => {
+  coinsData.coins = await axios("https://trendcore.io/level/indexsee.php")
     .then((data) => {
       try {
         const root = parse(data.data);
@@ -34,7 +34,7 @@ export const getCoinsWithNotify = async (
                 ? parseFloat(dollars) * 1000000
                 : parseFloat(dollars);
 
-            if (dollarsValue < 500000) return;
+            if (dollarsValue < 1000000) return;
 
             const price = parseFloat(
               child.childNodes[4].childNodes[0].rawText.trim()
@@ -44,7 +44,7 @@ export const getCoinsWithNotify = async (
             );
             const isPlus = level >= 0;
 
-            if (Math.abs(level) > 2) return;
+            if (Math.abs(level) > 0.5) return;
 
             responseCoins = [
               ...responseCoins,
@@ -53,43 +53,83 @@ export const getCoinsWithNotify = async (
                 dollarsValue,
                 price,
                 level,
+                levelPrev: 0,
                 isPlus,
                 isRepeated: false,
+                timestampOff: 0,
+                isShowed: false,
+                isActive: true,
               },
             ];
           }
         });
 
-        return responseCoins.map((responseCoin) => {
-          const currentCoin = currentCoins.find(
-            (currentCoin) =>
-              currentCoin.coinName == responseCoin.coinName &&
+        // console.log(coinsData.coins);
+
+        const newCoinsList = coinsData.coins.map((currentCoin) => {
+          const responseCoin = responseCoins.find(
+            (responseCoin) =>
+              responseCoin.coinName == currentCoin.coinName &&
               currentCoin.isPlus == responseCoin.isPlus
           );
 
-          if (currentCoin) {
-            if (
-              Math.abs(responseCoin.level) < Math.abs(currentCoin.level) &&
-              Math.abs(currentCoin.level) >= 0.5 &&
-              Math.abs(responseCoin.level) <= 0.5 &&
-              !currentCoin.isRepeated
-            ) {
-              sendNotify(bot, responseCoin, true);
-
-              return { ...responseCoin, isRepeated: true };
-            } else {
-              return responseCoin;
-            }
+          if (responseCoin && currentCoin.isActive) {
+            return {
+              ...responseCoin,
+              isShowed: currentCoin.isShowed,
+              levelPrev: currentCoin.level,
+            };
+          } else if (responseCoin && !currentCoin.isActive) {
+            return {
+              ...responseCoin,
+              isActive: Date.now() - currentCoin.timestampOff >= 60000,
+              isShowed: Date.now() - currentCoin.timestampOff < 60000,
+            };
           } else {
-            sendNotify(bot, responseCoin);
+            return {
+              ...currentCoin,
+              isActive: false,
+              timestampOff: currentCoin.timestampOff || Date.now(),
+            };
+          }
+        });
 
-            return responseCoin;
+        return [
+          ...newCoinsList,
+          ...responseCoins.filter(
+            (responseCoin) =>
+              !newCoinsList.some(
+                (newCoin) =>
+                  newCoin.coinName == responseCoin.coinName &&
+                  newCoin.isPlus == responseCoin.isPlus
+              )
+          ),
+        ].map((coin) => {
+          if (coin.isActive && coin.isShowed) {
+            if (
+              Math.abs(coin.level) < Math.abs(coin.levelPrev) &&
+              Math.abs(coin.levelPrev) >= 0.5 &&
+              Math.abs(coin.level) <= 0.5 &&
+              !coin.isRepeated
+            ) {
+              sendNotify(bot, coin, true);
+
+              return { ...coin, isRepeated: true };
+            } else {
+              return coin;
+            }
+          } else if (coin.isActive && !coin.isShowed) {
+            sendNotify(bot, coin);
+
+            return { ...coin, isShowed: true, isRepeated: true };
+          } else {
+            return coin;
           }
         });
       } catch (e) {
         console.log("ERROR BOT: " + e);
 
-        return currentCoins;
+        return coinsData.coins;
       }
     })
     .catch((e) => {
@@ -99,16 +139,17 @@ export const getCoinsWithNotify = async (
         console.log("ERROR BOT: " + e);
       }
 
-      return currentCoins;
+      return coinsData.coins;
     });
 
-  return coins;
+  return coinsData.coins;
 };
 
 export const getCurrentCoins = async (
-  bot: Telegraf<Scenes.SceneContext<Scenes.SceneSessionData>>
-): Promise<ICoin[]> => {
-  const coins = await axios("https://trendcore.io/level/indexsee.php")
+  bot: Telegraf<Scenes.SceneContext<Scenes.SceneSessionData>>,
+  coinsData: IData
+): Promise<any> => {
+  coinsData.coins = await axios("https://trendcore.io/level/indexsee.php")
     .then((data) => {
       try {
         const root = parse(data.data);
@@ -134,7 +175,7 @@ export const getCurrentCoins = async (
                 ? parseFloat(dollars) * 1000000
                 : parseFloat(dollars);
 
-            if (dollarsValue < 500000) return;
+            if (dollarsValue < 1000000) return;
 
             const price = parseFloat(
               child.childNodes[4].childNodes[0].rawText.trim()
@@ -144,7 +185,7 @@ export const getCurrentCoins = async (
             );
             const isPlus = level >= 0;
 
-            if (Math.abs(level) > 2) return;
+            if (Math.abs(level) > 0.5) return;
 
             responseCoins = [
               ...responseCoins,
@@ -153,8 +194,12 @@ export const getCurrentCoins = async (
                 dollarsValue,
                 price,
                 level,
+                levelPrev: 0,
                 isPlus,
                 isRepeated: false,
+                timestampOff: 0,
+                isShowed: false,
+                isActive: true,
               },
             ];
           }
@@ -177,5 +222,5 @@ export const getCurrentCoins = async (
       return [];
     });
 
-  return coins;
+  return null;
 };
