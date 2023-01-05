@@ -57,5 +57,8 @@ buck-out/
 
 # CocoaPods
 /ios/Pods/
-
-sessions_db_dev.json
+.env*
+users.txt
+*.png
+html/index_*
+sessions_db*
